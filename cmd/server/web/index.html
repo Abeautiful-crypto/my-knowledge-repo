@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>个人专属知识库</title>
+<style>
+  :root{
+    --bg:#fafaf9;
+    --surface:#ffffff;
+    --line:rgba(0,0,0,.075);
+    --line-strong:rgba(0,0,0,.14);
+    --text:#1c1c1a;
+    --muted:#8b8b85;
+    --faint:#b9b9b2;
+    --hover:rgba(0,0,0,.045);
+    --soft:#f2f2ef;
+    --accent:#1c1c1a;
+    --accent-ink:#ffffff;
+    --warn:#a4523e;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font:400 14px/1.65 system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  svg{display:block;}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;}
+  ::selection{background:rgba(0,0,0,.09);}
+  input,textarea,select{font:inherit;color:inherit;}
+
+  .app{display:flex;flex-direction:column;width:100%;height:100%;}
+
+  /* ===== 底部标签导航 ===== */
+  nav.tabbar{
+    flex:none;display:flex;
+    border-top:1px solid var(--line);
+    background:var(--surface);
+  }
+  nav.tabbar .tab{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:8px 0 9px;color:var(--muted);font-size:11.5px;
+    transition:color .15s;cursor:pointer;
+  }
+  nav.tabbar .tab:hover{color:var(--text);}
+  nav.tabbar .tab.active{color:var(--text);font-weight:500;}
+  nav.tabbar .tab svg{color:currentColor;}
+
+  /* ===== 主区 ===== */
+  .main{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
+  .view{flex:1;overflow-y:auto;}
+  .view[hidden]{display:none !important;}
+  .view::-webkit-scrollbar{width:6px;}
+  .view::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12);border-radius:3px;}
+  .page{max-width:760px;margin:0 auto;padding:22px 24px 40px;}
+
+  /* ===== 页面头 / 通用控件 ===== */
+  .page-head{display:flex;align-items:flex-start;gap:12px;padding:6px 0 16px;}
+  .page-head h2{margin:0 0 4px;font-size:18px;font-weight:500;letter-spacing:-.2px;display:flex;align-items:center;gap:8px;}
+  .page-head .desc{color:var(--muted);font-size:12.5px;margin:0;}
+  .pill-count{
+    font-size:11.5px;font-weight:400;color:var(--muted);
+    border:1px solid var(--line);border-radius:8px;padding:1px 8px;
+  }
+  .primary-btn{
+    margin-left:auto;flex:none;display:inline-flex;align-items:center;gap:6px;
+    background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;
+    padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;transition:opacity .15s;
+  }
+  .primary-btn:hover{opacity:.88;}
+  .ghost-btn{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--surface);border:1px solid var(--line);color:var(--text);
+    border-radius:10px;padding:7px 12px;font-size:12.5px;cursor:pointer;transition:.15s;
+  }
+  .ghost-btn:hover{background:var(--hover);border-color:var(--line-strong);}
+
+  .search-box{
+    display:flex;align-items:center;gap:8px;
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:12px;padding:9px 14px;margin-bottom:14px;color:var(--faint);
+  }
+  .search-box input{flex:1;background:transparent;border:0;outline:0;font-size:13.5px;}
+  .search-box input::placeholder{color:var(--faint);}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .chip{
+    border:1px solid var(--line);background:var(--surface);
+    color:var(--muted);border-radius:10px;padding:5px 12px;
+    font-size:12.5px;cursor:pointer;transition:.15s;
+  }
+  .chip:hover{background:var(--hover);color:var(--text);}
+  .chip.active{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);}
+
+  .empty-tip{color:var(--faint);text-align:center;padding:44px 0;font-size:13px;}
+
+  /* ===== 知识库体系 ===== */
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+  .stat-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;}
+  .stat-card .label{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px;}
+  .stat-card .value{font-size:20px;font-weight:500;margin-top:2px;letter-spacing:-.2px;}
+  .stat-card .value small{font-size:12px;color:var(--muted);font-weight:400;}
+
+  .kb-card{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;transition:border-color .15s;
+  }
+  .kb-card:hover{border-color:var(--line-strong);}
+  .kb-head{display:flex;align-items:center;gap:11px;}
+  .kb-icon{
+    width:38px;height:38px;border-radius:10px;flex:none;
+    display:grid;place-items:center;
+    background:var(--soft);border:1px solid var(--line);color:var(--muted);
+  }
+  .kb-title{font-size:14.5px;font-weight:500;}
+  .badge-private{
+    font-size:10.5px;color:var(--muted);border:1px solid var(--line);
+    border-radius:6px;padding:0 6px;margin-left:6px;vertical-align:2px;
+  }
+  .kb-tag{display:inline-block;font-size:11px;color:var(--muted);background:var(--soft);border-radius:6px;padding:0 8px;margin-top:3px;}
+  .kb-del{margin-left:auto;color:var(--faint);padding:5px;border-radius:8px;display:grid;place-items:center;transition:.15s;}
+  .kb-del:hover{background:var(--hover);color:var(--text);}
+  .kb-desc{color:var(--muted);font-size:12.5px;margin:8px 0 10px;}
+  .kb-foot{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12.5px;flex-wrap:wrap;}
+  .kb-actions{margin-left:auto;display:flex;gap:8px;}
+
+  /* ===== 原料操作 ===== */
+  select.kb-filter{
+    width:100%;background:var(--surface);border:1px solid var(--line);
+    border-radius:12px;padding:9px 14px;font-size:13.5px;margin-bottom:14px;outline:none;
+  }
+  .file-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;transition:border-color .15s;}
+  .file-card:hover{border-color:var(--line-strong);}
+  .file-head{display:flex;align-items:center;gap:11px;}
+  .file-ic{
+    width:34px;height:34px;border-radius:9px;flex:none;
+    display:grid;place-items:center;color:var(--muted);
+    background:var(--soft);border:1px solid var(--line);
+  }
+  .file-name{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .file-ops{margin-left:auto;display:flex;gap:2px;flex:none;}
+  .file-ops button{color:var(--faint);padding:5px;border-radius:8px;display:grid;place-items:center;transition:.15s;}
+  .file-ops button:hover{background:var(--hover);color:var(--text);}
+  .file-ops button.del:hover{color:var(--warn);}
+  .file-meta-row{display:flex;gap:8px;margin:8px 0;align-items:center;flex-wrap:wrap;}
+  .tag-size,.tag-ok,.tag-orphan{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11.5px;border-radius:7px;padding:1px 8px;border:1px solid var(--line);color:var(--muted);
+  }
+  .tag-ok{background:var(--soft);}
+  .tag-orphan{color:var(--warn);border-color:rgba(164,82,62,.28);background:rgba(164,82,62,.05);}
+  .file-preview{color:var(--muted);font-size:12.5px;margin-bottom:8px;line-height:1.6;}
+  .file-kb{font-size:12.5px;color:var(--muted);}
+  .file-foot{
+    display:flex;gap:12px;color:var(--faint);font-size:12px;
+    border-top:1px solid var(--line);margin-top:10px;padding-top:9px;flex-wrap:wrap;
+  }
+
+  /* ===== 问答 ===== */
+  #view-chat{display:flex;flex-direction:column;overflow:hidden;}
+  .chat-top{
+    flex:none;display:flex;align-items:center;gap:8px;
+    padding:12px 18px 8px;border-bottom:1px solid var(--line);
+    background:var(--surface);
+  }
+  .brand-mini{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:500;}
+  .brand-mini .mark{
+    width:24px;height:24px;border-radius:7px;flex:none;
+    background:var(--accent);color:var(--accent-ink);
+    display:grid;place-items:center;
+  }
+  .model-tag{
+    font-size:11px;color:var(--faint);
+    border:1px solid var(--line);border-radius:7px;padding:1px 6px;white-space:nowrap;
+  }
+  .chat-top .spacer{flex:1;}
+  .chat-body{flex:1;display:flex;min-height:0;position:relative;}
+  .hist-side{
+    width:236px;flex:none;overflow-y:auto;
+    border-right:1px solid var(--line);
+    padding:12px 10px 20px;
+  }
+  .hist-side::-webkit-scrollbar{width:6px;}
+  .hist-side::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12);border-radius:3px;}
+  .hist-group{font-size:11.5px;color:var(--faint);padding:10px 10px 4px;}
+  .hist-item{
+    display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+    padding:7px 10px;border-radius:8px;color:var(--muted);cursor:pointer;
+    transition:background .15s,color .15s;
+  }
+  .hist-item:hover{background:var(--hover);color:var(--text);}
+  .hist-item.active{background:var(--hover);color:var(--text);font-weight:500;}
+  .hist-item .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;}
+  .hist-item .del{color:var(--faint);display:grid;place-items:center;padding:3px;border-radius:6px;flex:none;opacity:0;transition:opacity .15s;}
+  .hist-item:hover .del{opacity:1;}
+  .hist-item .del:hover{background:var(--hover);color:var(--text);}
+  .hist-empty{color:var(--faint);font-size:12.5px;padding:8px 10px;}
+  .chat-col{flex:1;min-width:0;display:flex;flex-direction:column;}
+
+  #chat{flex:1;overflow-y:auto;padding:26px 24px 10px;}
+  #chat::-webkit-scrollbar{width:6px;}
+  #chat::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12);border-radius:3px;}
+  #chat > *{width:100%;max-width:720px;margin-left:auto;margin-right:auto;}
+
+  .empty{padding:4vh 0 3vh;}
+  .hero-mark{
+    width:52px;height:52px;border-radius:15px;margin:0 auto 16px;
+    background:var(--surface);border:1px solid var(--line);
+    display:grid;place-items:center;color:var(--text);
+  }
+  .empty .t{font-size:21px;font-weight:500;margin:0 0 6px;letter-spacing:-.2px;text-align:center;}
+  .empty p{font-size:13.5px;color:var(--muted);margin:0;text-align:center;}
+  .examples{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:18px;}
+
+  .input-wrap{max-width:720px;width:100%;margin:22px auto 0;}
+  .composer-dock{padding:0 24px 18px;flex:none;}
+  .composer{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:22px;padding:14px 14px 10px;transition:border-color .18s;
+  }
+  .composer:focus-within{border-color:var(--line-strong);}
+  .composer textarea{
+    width:100%;border:0;outline:0;resize:none;background:transparent;color:var(--text);
+    font:inherit;font-size:15px;line-height:1.65;min-height:44px;max-height:180px;padding:2px 4px 8px;
+  }
+  .composer textarea::placeholder{color:var(--faint);}
+  .cbar{display:flex;align-items:center;gap:6px;}
+  .target-pill{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 10px;border-radius:9px;font-size:12.5px;color:var(--muted);
+  }
+  .target-pill span{color:var(--text);}
+  .cbar .spacer{flex:1;}
+  .send{
+    width:32px;height:32px;border-radius:50%;flex:none;
+    display:grid;place-items:center;color:var(--faint);
+    background:var(--soft);transition:background .15s,color .15s;
+  }
+  .send.ready{background:var(--accent);color:var(--accent-ink);}
+
+  .msg.me{display:flex;justify-content:flex-end;}
+  .msg.me .bubble{
+    background:var(--soft);border:1px solid var(--line);border-radius:14px;
+    padding:10px 14px;max-width:82%;white-space:pre-wrap;word-break:break-word;font-size:14px;
+  }
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px 10px;}
+  .md p{margin:0 0 10px;}
+  .md h3,.md h4,.md h5,.md h6{margin:14px 0 8px;font-weight:500;}
+  .md h3{font-size:15px;}
+  .md h4,.md h5,.md h6{font-size:14px;}
+  .md ul,.md ol{margin:4px 0 10px;padding-left:20px;}
+  .md li{margin:3px 0;}
+  .md strong{font-weight:500;color:var(--text);}
+  .md code{
+    background:var(--soft);border:1px solid var(--line);color:var(--text);
+    border-radius:5px;padding:1px 5px;font-size:12.5px;font-family:Consolas,monospace;
+  }
+  .md a{color:var(--text);text-decoration:underline;text-underline-offset:2px;}
+  .cursor{display:inline-block;width:7px;height:15px;background:var(--text);vertical-align:-2px;animation:blink 1s step-end infinite;}
+  @keyframes blink{50%{opacity:0;}}
+  .sources{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);}
+  .sources .title{color:var(--muted);font-size:12.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+  .src-item{
+    display:flex;align-items:center;gap:9px;
+    background:var(--soft);border:1px solid var(--line);
+    border-radius:10px;padding:8px 12px;margin-bottom:6px;font-size:12.5px;
+  }
+  .src-item .icon{color:var(--faint);flex:none;display:grid;place-items:center;}
+  .src-item .name{color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .src-item .score{margin-left:auto;flex:none;color:var(--muted);}
+  .src-item .pct{color:var(--faint);font-size:11.5px;}
+  .meta{display:flex;align-items:center;gap:8px;color:var(--faint);font-size:11.5px;padding:9px 2px 2px;}
+  .meta .copy{display:inline-flex;align-items:center;gap:5px;margin-left:auto;cursor:pointer;transition:color .15s;}
+  .meta .copy:hover{color:var(--text);}
+  .status{color:var(--muted);font-size:12.5px;display:flex;align-items:center;gap:8px;padding:0 4px 8px;}
+  .dots{display:inline-flex;gap:4px;}
+  .dots i{width:4px;height:4px;border-radius:50%;background:var(--muted);animation:bounce 1.2s infinite;}
+  .dots i:nth-child(2){animation-delay:.15s;}
+  .dots i:nth-child(3){animation-delay:.3s;}
+  @keyframes bounce{0%,60%,100%{transform:none;opacity:.35;}30%{transform:translateY(-3px);opacity:1;}}
+  .notice-line{display:flex;align-items:flex-start;gap:7px;color:var(--muted);font-size:12.5px;padding:0 2px 8px;}
+  .saved-line{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12.5px;padding:8px 2px 0;}
+  .err{color:var(--warn);}
+
+  /* ===== 弹层 ===== */
+  .overlay{
+    position:fixed;inset:0;background:rgba(28,28,26,.24);
+    display:none;align-items:center;justify-content:center;z-index:50;
+  }
+  .overlay.show{display:flex;}
+  .modal{
+    width:min(480px,calc(100% - 40px));max-height:86vh;overflow-y:auto;
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);padding:20px 22px;
+  }
+  .modal h3{margin:0 0 16px;font-size:15px;font-weight:500;display:flex;align-items:center;gap:8px;}
+  .modal h3 .close{margin-left:auto;cursor:pointer;color:var(--faint);display:grid;place-items:center;padding:3px;border-radius:7px;}
+  .modal h3 .close:hover{background:var(--hover);color:var(--text);}
+  .profile{
+    display:flex;align-items:center;gap:13px;
+    background:var(--soft);border:1px solid var(--line);
+    border-radius:var(--radius);padding:13px 15px;margin-bottom:14px;
+  }
+  .profile .face{
+    width:44px;height:44px;border-radius:11px;flex:none;
+    background:var(--surface);border:1px solid var(--line);
+    display:grid;place-items:center;color:var(--muted);
+  }
+  .profile .name{font-weight:500;font-size:14.5px;display:flex;align-items:center;gap:6px;}
+  .profile .name .pro{font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-radius:7px;padding:0 7px;font-weight:400;}
+  .profile .mail{color:var(--muted);font-size:12px;}
+  .profile .role{color:var(--faint);font-size:12px;}
+  .seg{display:flex;background:var(--soft);border:1px solid var(--line);border-radius:11px;padding:3px;margin-bottom:14px;}
+  .seg .seg-item{
+    flex:1;text-align:center;font-size:12.5px;color:var(--muted);
+    padding:6px 0;border-radius:8px;cursor:pointer;transition:.15s;
+  }
+  .seg .seg-item.active{background:var(--surface);color:var(--text);border:1px solid var(--line);}
+  .usage-row{
+    background:var(--soft);border:1px solid var(--line);
+    border-radius:12px;padding:11px 14px;margin-bottom:10px;
+    font-size:13px;display:flex;align-items:center;gap:8px;
+  }
+  .usage-row .right{margin-left:auto;}
+  .bar{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:11px 14px;margin-bottom:10px;}
+  .bar .row{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px;color:var(--muted);}
+  .bar .row .right{margin-left:auto;color:var(--text);}
+  .bar .track{height:6px;border-radius:4px;background:var(--bg);border:1px solid var(--line);overflow:hidden;}
+  .bar .fill{height:100%;background:var(--accent);transition:width .4s;}
+  .two-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .mini-stat{background:var(--soft);border:1px solid var(--line);border-radius:12px;text-align:center;padding:12px;}
+  .mini-stat .v{font-size:19px;font-weight:500;}
+  .mini-stat .l{color:var(--muted);font-size:12px;}
+  .cfg-table{width:100%;font-size:12.5px;color:var(--muted);border-collapse:collapse;}
+  .cfg-table td{padding:6px 0;border-bottom:1px solid var(--line);}
+  .cfg-table td:last-child{text-align:right;color:var(--text);font-family:Consolas,monospace;}
+  .modal-foot{display:flex;align-items:center;margin-top:16px;gap:8px;}
+  .danger-link{color:var(--warn);font-size:12.5px;cursor:pointer;background:none;border:0;display:inline-flex;align-items:center;gap:6px;}
+  .danger-link:hover{text-decoration:underline;}
+  .done-btn{
+    margin-left:auto;background:var(--accent);color:var(--accent-ink);border:0;
+    border-radius:10px;padding:7px 20px;font-size:13px;font-weight:500;cursor:pointer;
+  }
+
+  .toast{
+    position:fixed;bottom:76px;left:50%;transform:translateX(-50%);
+    background:var(--accent);color:var(--accent-ink);font-size:12.5px;
+    border-radius:10px;padding:8px 16px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:99;
+  }
+  .toast.show{opacity:1;}
+
+  .dlg-modal{width:min(420px,calc(100% - 40px));}
+  .dlg-input{
+    width:100%;background:var(--surface);border:1px solid var(--line-strong);
+    border-radius:10px;padding:10px 12px;font-size:14px;outline:none;margin-bottom:6px;
+  }
+  .dlg-input:focus{border-color:var(--text);}
+  .dlg-text{color:var(--muted);font-size:12.5px;margin:0 0 8px;line-height:1.6;}
+  .dlg-err{color:var(--warn);font-size:12.5px;flex:1;}
+
+  .edit-modal{width:min(880px,calc(100% - 40px));}
+  .edit-row{display:flex;gap:10px;margin-bottom:8px;flex-wrap:wrap;}
+  .edit-row .dlg-input{margin-bottom:0;flex:1;min-width:200px;}
+  .edit-row select.kb-filter{width:200px;margin-bottom:0;}
+  .edit-path{color:var(--faint);font-size:12.5px;margin-bottom:8px;font-family:Consolas,monospace;}
+  .edit-area{
+    width:100%;height:46vh;min-height:220px;resize:vertical;
+    background:var(--surface);border:1px solid var(--line-strong);color:var(--text);
+    border-radius:10px;padding:12px 14px;outline:none;
+    font:13.5px/1.7 Consolas,"Microsoft YaHei",monospace;margin-bottom:4px;
+  }
+
+  @media (max-width:900px){
+    /* 窄屏：会话记录改为顶栏下方的一条横向会话条，始终可见，无需按钮切换 */
+    .chat-body{flex-direction:column;}
+    .hist-side{
+      width:auto;flex:none;border-right:0;border-bottom:1px solid var(--line);
+      display:flex;align-items:center;gap:6px;overflow-x:auto;overflow-y:hidden;
+      padding:8px 12px;white-space:nowrap;
+    }
+    .hist-group{display:none;}
+    .hist-item{width:auto;flex:none;padding:5px 10px;border:1px solid var(--line);border-radius:999px;}
+  }
+  @media (max-width:640px){
+    #chat{padding:20px 16px 8px;}
+    .composer-dock{padding:0 16px 14px;}
+    .page{padding:16px 16px 32px;}
+    .stat-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <main class="main">
+    <!-- ===== 问答对答 ===== -->
+    <div class="view" id="view-chat">
+      <div class="chat-top">
+        <span class="brand-mini">
+          <span class="mark">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          </span>
+          个人知识库
+        </span>
+        <span class="model-tag" id="modelTag">RAG</span>
+        <span class="spacer"></span>
+        <button class="ghost-btn" id="newSessionBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          新会话
+        </button>
+      </div>
+      <div class="chat-body">
+        <aside class="hist-side" id="historyPanel"></aside>
+        <div class="chat-col">
+          <div id="chat">
+        <div class="empty" id="empty">
+          <div class="hero-mark">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          </div>
+          <div class="t">你的笔记，随问随答</div>
+          <p>基于本地向量检索，回答均附带原文出处</p>
+          <div class="examples">
+            <span class="chip q">eino 有哪些核心能力？</span>
+            <span class="chip q">咖啡怎么冲？</span>
+          </div>
+
+          <div class="input-wrap" id="inputWrap">
+            <div class="composer">
+              <textarea id="input" rows="1" placeholder="询问知识库中有关笔记内容的任何问题…"></textarea>
+              <div class="cbar">
+                <span class="target-pill">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                  目标库 <span id="targetKB">全部笔记</span>
+                </span>
+                <span class="spacer"></span>
+                <button class="send" id="send" type="button" title="发送">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+          <div class="composer-dock" id="chatBottom"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 知识库体系 ===== -->
+    <div class="view" id="view-kb" hidden>
+      <div class="page">
+        <div class="page-head">
+          <div>
+            <h2>知识库体系 <span class="pill-count" id="kbCount">0 个体系</span></h2>
+            <p class="desc">本地 Markdown 笔记按目录划分体系，切块后进入向量索引</p>
+          </div>
+          <button class="primary-btn" id="createKbBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            新建知识库
+          </button>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>文档总量</div>
+            <div class="value" id="stFiles">-<small> 份</small></div>
+          </div>
+          <div class="stat-card">
+            <div class="label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>总切块 Chunks</div>
+            <div class="value" id="stChunks">-<small> 个</small></div>
+          </div>
+          <div class="stat-card">
+            <div class="label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>Token 规模</div>
+            <div class="value" id="stTokens">-<small> est</small></div>
+          </div>
+        </div>
+        <div class="search-box">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.2-3.2"/></svg>
+          <input id="kbSearch" placeholder="搜索知识库或文件名…" />
+        </div>
+        <div class="chips" id="kbChips"></div>
+        <div id="kbCards"></div>
+      </div>
+    </div>
+
+    <!-- ===== 原资料操作 ===== -->
+    <div class="view" id="view-files" hidden>
+      <div class="page">
+        <div class="page-head">
+          <div>
+            <h2>原资料操作 <span class="pill-count" id="fileCount">0 个文件</span></h2>
+            <p class="desc">支持原文件查看、重新切块、从索引移除；上传 .md 自动切块入库</p>
+          </div>
+          <button class="ghost-btn" id="createNoteBtn" style="margin-left:auto">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+            新建笔记
+          </button>
+          <label class="primary-btn" style="margin-left:8px;cursor:pointer">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+            上传导入
+            <input type="file" id="uploadInput" accept=".md,.markdown" multiple hidden />
+          </label>
+        </div>
+        <div class="search-box">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.2-3.2"/></svg>
+          <input id="fileSearch" placeholder="搜索文档名或内容…" />
+        </div>
+        <select class="kb-filter" id="fileKBFilter"></select>
+        <div id="fileCards"></div>
+      </div>
+    </div>
+
+    <!-- ===== 我的空间 ===== -->
+    <div class="view" id="view-me" hidden>
+      <div class="page">
+        <div class="page-head">
+          <div>
+            <h2>我的空间</h2>
+            <p class="desc">本地实例状态与知识库用量</p>
+          </div>
+        </div>
+        <div class="profile">
+          <div class="face">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div>
+            <div class="name">本地知识库实例 <span class="pro">Personal</span></div>
+            <div class="mail" id="meIndex">kb_index @ localhost</div>
+            <div class="role">单机运行 · 数据不出本机</div>
+          </div>
+        </div>
+        <div class="seg">
+          <div class="seg-item active" data-seg="usage">容量与用量</div>
+          <div class="seg-item" data-seg="cfg">配置信息</div>
+        </div>
+        <div id="segUsage">
+          <div class="bar">
+            <div class="row">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="6" r="2.4"/><circle cx="19" cy="6" r="2.4"/><circle cx="5" cy="18" r="2.4"/><circle cx="19" cy="18" r="2.4"/><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3"/></svg>
+              向量条目 Chunks <span class="right" id="meChunks">-</span>
+            </div>
+            <div class="track"><div class="fill" id="meChunksBar" style="width:0%"></div></div>
+          </div>
+          <div class="usage-row">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>
+            估算 Token 占用 <span class="right" id="meTokens">-</span>
+          </div>
+          <div class="two-grid">
+            <div class="mini-stat"><div class="v" id="meKBs">-</div><div class="l">自建知识库</div></div>
+            <div class="mini-stat"><div class="v" id="meFiles">-</div><div class="l">原资料文件</div></div>
+          </div>
+        </div>
+        <div id="segCfg" hidden>
+          <table class="cfg-table" id="cfgTable"></table>
+        </div>
+        <div class="modal-foot">
+          <button class="danger-link" id="rebuildBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+            清空并重建索引
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== 底部导航 ===== -->
+  <nav class="tabbar">
+    <div class="tab active" data-view="chat">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      问答对答
+    </div>
+    <div class="tab" data-view="kb">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/></svg>
+      知识库体系
+    </div>
+    <div class="tab" data-view="files">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
+      原料操作
+    </div>
+    <div class="tab" data-view="me">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      我的
+    </div>
+  </nav>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ===== 笔记编辑器 ===== -->
+<div class="overlay" id="editOverlay">
+  <div class="modal edit-modal">
+    <h3>
+      <span id="editTitle">编辑笔记</span>
+      <span class="close" id="editClose"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+    </h3>
+    <div class="edit-row" id="editMetaRow">
+      <input class="dlg-input" id="editName" placeholder="文件名，如：Redis 踩坑记录.md" />
+      <select class="kb-filter" id="editKB"></select>
+    </div>
+    <div class="edit-path" id="editPath"></div>
+    <textarea class="edit-area" id="editContent" spellcheck="false"></textarea>
+    <div class="modal-foot">
+      <span class="dlg-err" id="editErr"></span>
+      <button class="ghost-btn" id="editCancel">取消</button>
+      <button class="done-btn" id="editSave">保存并入库</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 通用对话框 ===== -->
+<div class="overlay" id="dlgOverlay">
+  <div class="modal dlg-modal">
+    <h3>
+      <span id="dlgTitle"></span>
+      <span class="close" id="dlgClose"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+    </h3>
+    <input class="dlg-input" id="dlgInput" />
+    <p class="dlg-text" id="dlgText"></p>
+    <div class="modal-foot">
+      <span class="dlg-err" id="dlgErr"></span>
+      <button class="ghost-btn" id="dlgCancel">取消</button>
+      <button class="done-btn" id="dlgOk">确定</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= 通用 ================= */
+const $ = id => document.getElementById(id);
+const toast = $('toast');
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.remove('show'), 2000);
+}
+async function api(path, opts) {
+  const res = await fetch(path, opts);
+  if (!res.ok) throw new Error((await res.text().catch(() => '')) || ('HTTP ' + res.status));
+  return res.json();
+}
+
+/* ===== 线性图标（Lucide 风格，1.5px 描边） ===== */
+const sv = (p, s) => `<svg width="${s || 14}" height="${s || 14}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const ICON = {
+  file: sv('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>'),
+  globe: sv('<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"/>'),
+  save: sv('<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>'),
+  ban: sv('<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>'),
+  warn: sv('<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'),
+  copy: sv('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>'),
+  trash: sv('<path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>'),
+  edit: sv('<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>'),
+  refresh: sv('<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/>'),
+  check: sv('<path d="M20 6 9 17l-5-5"/>'),
+  folder: sv('<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/>'),
+};
+
+/* ===== 通用对话框（原生 prompt/confirm 在内嵌浏览器中被禁用） ===== */
+let dlgCb = null, dlgCancelCb = null;
+function openDlg({ title, text, input, placeholder, okText, onOk, onCancel, inputValue }) {
+  $('dlgTitle').textContent = title || '';
+  $('dlgText').textContent = text || '';
+  $('dlgText').style.display = text ? '' : 'none';
+  const inp = $('dlgInput');
+  inp.style.display = input ? '' : 'none';
+  inp.value = inputValue || '';
+  inp.placeholder = placeholder || '';
+  $('dlgOk').textContent = okText || '确定';
+  $('dlgErr').textContent = '';
+  dlgCb = onOk || null;
+  dlgCancelCb = onCancel || null;
+  $('dlgOverlay').classList.add('show');
+  if (input) setTimeout(() => inp.focus(), 60);
+}
+function closeDlg() {
+  const c = dlgCancelCb;
+  dlgCancelCb = null; dlgCb = null;
+  $('dlgOverlay').classList.remove('show');
+  if (c) c();
+}
+$('dlgOk').addEventListener('click', async () => {
+  if (!dlgCb) return closeDlg();
+  const v = $('dlgInput').value.trim();
+  let r;
+  try { r = await dlgCb(v); } catch (e) { $('dlgErr').textContent = e.message || String(e); return; }
+  if (r !== false) { dlgCancelCb = null; closeDlg(); }
+});
+$('dlgInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('dlgOk').click(); });
+$('dlgCancel').addEventListener('click', closeDlg);
+$('dlgClose').addEventListener('click', closeDlg);
+$('dlgOverlay').addEventListener('click', e => { if (e.target === $('dlgOverlay')) closeDlg(); });
+const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const fmtK = n => n >= 10000 ? (n / 1000).toFixed(1) + 'K' : n;
+const fmtTime = ts => {
+  if (!ts) return '索引残留';
+  const d = new Date(ts * 1000), p = n => String(n).padStart(2, '0');
+  return `${d.getMonth() + 1}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
+/* ================= 视图切换 ================= */
+const MODEL = 'deepseek-chat';
+$('modelTag').textContent = MODEL.toUpperCase() + ' · RAG';
+
+document.querySelectorAll('nav .tab').forEach(t => t.addEventListener('click', () => switchView(t.dataset.view)));
+function switchView(v) {
+  document.querySelectorAll('nav .tab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
+  ['chat', 'kb', 'files', 'me'].forEach(name => {
+    $('view-' + name).hidden = name !== v;
+  });
+  if (v === 'kb') loadKBView();
+  if (v === 'files') loadFilesView();
+  if (v === 'me') openMe();
+  if (v === 'chat') $('input').focus();
+}
+
+/* ================= 知识库体系 ================= */
+let statsCache = null, filesCache = [], kbFilter = '全部', kbSearchKw = '';
+
+$('kbSearch').addEventListener('input', e => { kbSearchKw = e.target.value.trim(); renderKBs(); });
+$('createKbBtn').addEventListener('click', () => {
+  openDlg({
+    title: '新建知识库',
+    input: true,
+    placeholder: '名称：中文/字母/数字/连字符，如 前端笔记',
+    okText: '创建',
+    onOk: async name => {
+      if (!name) { $('dlgErr').textContent = '请输入知识库名称'; return false; }
+      try {
+        await api('/api/kb/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+        showToast('已创建目录 notes/' + name + '，把 .md 放进去或从「原料操作」上传');
+        loadKBView();
+      } catch (e) { $('dlgErr').textContent = '创建失败：' + e.message; return false; }
+    },
+  });
+});
+
+async function loadKBView() {
+  try {
+    const [stats, files] = await Promise.all([api('/api/stats'), api('/api/files')]);
+    statsCache = stats; filesCache = files;
+    renderKBs();
+  } catch (e) { showToast('加载失败：' + e.message); }
+}
+
+function renderKBs() {
+  const st = statsCache || { files: 0, chunks: 0, tokensEst: 0, kbs: [] };
+  $('stFiles').innerHTML = st.files + '<small> 份</small>';
+  $('stChunks').innerHTML = fmtK(st.chunks) + '<small> 个</small>';
+  $('stTokens').innerHTML = fmtK(st.tokensEst) + '<small> est</small>';
+  $('kbCount').textContent = st.kbs.length + ' 个体系';
+
+  const chipsEl = $('kbChips');
+  chipsEl.innerHTML = '';
+  ['全部', ...st.kbs.map(k => k.name)].forEach(name => {
+    const c = document.createElement('span');
+    c.className = 'chip' + (kbFilter === name ? ' active' : '');
+    c.textContent = name;
+    c.addEventListener('click', () => { kbFilter = name; renderKBs(); });
+    chipsEl.appendChild(c);
+  });
+
+  const wrap = $('kbCards');
+  wrap.innerHTML = '';
+  const kbs = st.kbs.filter(k => kbFilter === '全部' || k.name === kbFilter);
+  const kw = kbSearchKw.toLowerCase();
+  const matchFiles = name => filesCache.filter(f =>
+    (name === '全部' || f.kb === name) &&
+    (!kw || f.source.toLowerCase().includes(kw) || (f.preview || '').toLowerCase().includes(kw)));
+
+  if (!kbs.length) { wrap.innerHTML = '<div class="empty-tip">还没有知识库，点击右上角「新建知识库」</div>'; return; }
+
+  let shown = 0;
+  kbs.forEach(k => {
+    const files = matchFiles(k.name);
+    if (kbSearchKw && !files.length) return;
+    shown++;
+    const card = document.createElement('div');
+    card.className = 'kb-card';
+    card.innerHTML = `
+      <div class="kb-head">
+        <div class="kb-icon">${ICON.folder.replace(/width="14" height="14"/, 'width="19" height="19"')}</div>
+        <div>
+          <div class="kb-title">${esc(k.name)}<span class="badge-private">私有</span></div>
+          <span class="kb-tag">本地目录</span>
+        </div>
+        <button class="kb-del" title="从向量库移除该体系">${ICON.trash}</button>
+      </div>
+      <div class="kb-desc">收录 ${k.files} 个 Markdown 原文件、${k.chunks} 个向量切块，问答时全程在本机检索</div>
+      <div class="kb-foot">
+        <span>${k.files} 份原资料</span><span>·</span><span>${k.chunks} 切块</span>
+        <div class="kb-actions">
+          <button class="ghost-btn manage">${ICON.edit} 资料管理 (${k.files})</button>
+          <button class="ghost-btn enter">进入问答</button>
+        </div>
+      </div>`;
+    card.querySelector('.kb-del').addEventListener('click', () => {
+      const isDefault = k.name === '默认笔记库';
+      openDlg({
+        title: isDefault ? '清空默认笔记库切块' : '删除知识库',
+        text: isDefault
+          ? `「默认笔记库」即 notes 根目录，只能清空它的向量切块，不会删除磁盘文件。确定继续？`
+          : `将删除「${k.name}」：向量库切块全部清除，磁盘上的 notes/${k.name}/ 目录（含 .md 文件）一并删除，不可恢复！`,
+        okText: isDefault ? '清空切块' : '删除',
+        onOk: async () => {
+          try {
+            const r = await api('/api/kb/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: k.name }) });
+            showToast(r.removedDir ? `已删除知识库「${k.name}」` : '已清空切块');
+            loadKBView();
+          } catch (e) { showToast('删除失败：' + e.message); }
+        },
+      });
+    });
+    card.querySelector('.manage').addEventListener('click', () => { pendingFileKB = k.name; switchView('files'); });
+    card.querySelector('.enter').addEventListener('click', () => switchView('chat'));
+    wrap.appendChild(card);
+  });
+  if (!shown) wrap.innerHTML = '<div class="empty-tip">没有匹配的文件</div>';
+}
+
+/* ================= 笔记编辑器 ================= */
+let editingSource = null; // null 表示新建
+
+function fillEditKBSelect(selected) {
+  const sel = $('editKB');
+  const names = (statsCache?.kbs || []).map(k => k.name);
+  sel.innerHTML = '<option value="">（根目录 / 默认笔记库）</option>' +
+    names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  sel.value = selected || '';
+}
+
+function openEditor(source) {
+  editingSource = source || null;
+  $('editErr').textContent = '';
+  if (editingSource) {
+    $('editTitle').textContent = '编辑笔记';
+    $('editPath').textContent = 'notes/' + editingSource;
+    $('editMetaRow').style.display = 'none';
+    $('editContent').value = '加载中...';
+    $('editOverlay').classList.add('show');
+    api('/api/files/content?source=' + encodeURIComponent(editingSource))
+      .then(d => { $('editContent').value = d.content; })
+      .catch(e => { $('editErr').textContent = '读取失败：' + e.message; });
+  } else {
+    $('editTitle').textContent = '新建笔记';
+    $('editPath').textContent = '写完后保存，会自动切块并入库';
+    $('editMetaRow').style.display = '';
+    $('editName').value = '';
+    $('editContent').value = '# 标题\n\n## 要点\n\n- ';
+    fillEditKBSelect($('fileKBFilter').value === '全部' ? '' : $('fileKBFilter').value);
+    $('editOverlay').classList.add('show');
+    setTimeout(() => $('editName').focus(), 60);
+  }
+}
+function closeEditor() { $('editOverlay').classList.remove('show'); editingSource = null; }
+
+$('editClose').addEventListener('click', closeEditor);
+$('editCancel').addEventListener('click', closeEditor);
+$('editOverlay').addEventListener('click', e => { if (e.target === $('editOverlay')) closeEditor(); });
+$('editSave').addEventListener('click', async () => {
+  const content = $('editContent').value;
+  $('editErr').textContent = '';
+  try {
+    if (editingSource) {
+      showToast('保存并重新切块中...');
+      const r = await api('/api/files/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: editingSource, content }) });
+      showToast(`已保存，${r.chunks} 个切块已更新`);
+    } else {
+      const name = $('editName').value.trim();
+      if (!name) { $('editErr').textContent = '请填写文件名'; return; }
+      showToast('新建并入库中...');
+      const r = await api('/api/files/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kb: $('editKB').value, name, content }) });
+      showToast(`已创建 ${r.source}，${r.chunks} 个切块已入库`);
+    }
+    closeEditor();
+    loadFilesView();
+  } catch (e) { $('editErr').textContent = '保存失败：' + e.message; }
+});
+
+/* ================= 原料操作 ================= */
+$('createNoteBtn').addEventListener('click', () => openEditor(null));
+$('fileSearch').addEventListener('input', renderFiles);
+$('fileKBFilter').addEventListener('change', renderFiles);
+$('uploadInput').addEventListener('change', async e => {
+  const fs = [...e.target.files];
+  if (!fs.length) return;
+  const fd = new FormData();
+  fs.forEach(f => fd.append('files', f));
+  // 当前筛选了具体知识库时，文件上传到 notes/<kb>/ 并归入该体系
+  const targetKB = $('fileKBFilter').value || '全部';
+  if (targetKB !== '全部') fd.append('kb', targetKB);
+  showToast(targetKB === '全部' ? '上传并切块中（归入默认笔记库）...' : `上传并切块中（归入「${targetKB}」）...`);
+  try {
+    const r = await api('/api/files/upload', { method: 'POST', body: fd });
+    showToast(`已导入 ${r.imported} 个文件${targetKB !== '全部' ? ' 到「' + targetKB + '」' : ''}`);
+    loadFilesView();
+  } catch (err) { showToast('上传失败：' + err.message); }
+  e.target.value = '';
+});
+
+let pendingFileKB = ''; // 从知识库体系「资料管理」跳转过来时要选中的知识库
+
+async function loadFilesView() {
+  try {
+    const [stats, files] = await Promise.all([api('/api/stats'), api('/api/files')]);
+    statsCache = stats; filesCache = files;
+    const sel = $('fileKBFilter');
+    const prev = sel.value;
+    sel.innerHTML = '<option value="全部">全部知识库</option>' +
+      stats.kbs.map(k => `<option value="${esc(k.name)}">${esc(k.name)}</option>`).join('');
+    // 优先用「资料管理」带来的目标库；否则保持当前筛选
+    if (pendingFileKB) {
+      sel.value = stats.kbs.some(k => k.name === pendingFileKB) ? pendingFileKB : '全部';
+      pendingFileKB = '';
+    } else {
+      sel.value = prev || '全部';
+    }
+    renderFiles();
+  } catch (e) { showToast('加载失败：' + e.message); }
+}
+
+function renderFiles() {
+  const kw = ($('fileSearch').value || '').toLowerCase();
+  const kbName = $('fileKBFilter').value || '全部';
+  $('fileCount').textContent = filesCache.length + ' 个文件';
+
+  const list = filesCache.filter(f =>
+    (kbName === '全部' || f.kb === kbName) &&
+    (!kw || f.source.toLowerCase().includes(kw) || (f.preview || '').toLowerCase().includes(kw)));
+
+  const wrap = $('fileCards');
+  wrap.innerHTML = '';
+  if (!list.length) { wrap.innerHTML = '<div class="empty-tip">没有文件。右上角可上传 .md，或把文件放进 notes 目录后重新切块。</div>'; return; }
+
+  list.forEach(f => {
+    const card = document.createElement('div');
+    card.className = 'file-card';
+    card.innerHTML = `
+      <div class="file-head">
+        <div class="file-ic">${ICON.file}</div>
+        <div class="file-name" title="${esc(f.source)}">${esc(f.source)}</div>
+        <div class="file-ops">
+          <button class="ed" title="编辑笔记内容">${ICON.edit}</button>
+          <button class="re" title="重新切块入库">${ICON.refresh}</button>
+          <button class="del" title="从向量库删除">${ICON.trash}</button>
+        </div>
+      </div>
+      <div class="file-meta-row">
+        <span class="tag-size">${(f.chars * 3 / 1024).toFixed(1)} MB</span>
+        ${f.orphan ? `<span class="tag-orphan">${ICON.warn} 源文件已删除</span>` : `<span class="tag-ok">${ICON.check} 已切块就绪</span>`}
+      </div>
+      <div class="file-preview">${esc(f.preview || '')}</div>
+      <div class="file-kb">所属知识库：${esc(f.kb)}</div>
+      <div class="file-foot">
+        <span>${f.chunks} 切块</span>
+        <span>≈${fmtK(Math.round(f.chars / 2))} Tokens</span>
+        <span style="margin-left:auto">${f.modTime ? '更新于 ' + fmtTime(f.modTime) : '仅存在于索引'}</span>
+      </div>`;
+    card.querySelector('.ed').addEventListener('click', () => openEditor(f.source));
+    card.querySelector('.re').addEventListener('click', async () => {
+      if (f.orphan) { showToast('源文件已不存在，无法重新切块'); return; }
+      showToast('重新切块中...');
+      try {
+        const r = await api('/api/files/reindex', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: f.source }) });
+        showToast(`已重新切块 ${r.chunks} 块`);
+        loadFilesView();
+      } catch (e) { showToast('失败：' + e.message); }
+    });
+    card.querySelector('.del').addEventListener('click', () => {
+      openDlg({
+        title: '删除文件切块',
+        text: `从向量库删除「${f.source}」的 ${f.chunks} 个切块？（硬盘上的 .md 文件不会被删除）`,
+        okText: '删除',
+        onOk: async () => {
+          try {
+            await api('/api/files/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: f.source }) });
+            showToast('已删除');
+            loadFilesView();
+          } catch (e) { showToast('删除失败：' + e.message); }
+        },
+      });
+    });
+    wrap.appendChild(card);
+  });
+}
+
+/* ================= 我的空间 ================= */
+document.querySelectorAll('.seg-item').forEach(s => s.addEventListener('click', () => {
+  document.querySelectorAll('.seg-item').forEach(x => x.classList.toggle('active', x === s));
+  $('segUsage').hidden = s.dataset.seg !== 'usage';
+  $('segCfg').hidden = s.dataset.seg !== 'cfg';
+}));
+$('rebuildBtn').addEventListener('click', () => {
+  openDlg({
+    title: '清空并重建索引',
+    text: '将对 notes 目录全部 .md 重新切块、重新生成向量（消耗 API 额度），确定继续？',
+    okText: '重建',
+    onOk: async () => {
+      showToast('重建中，视笔记量可能需要几十秒...');
+      try {
+        const r = await api('/api/index/rebuild', { method: 'POST' });
+        showToast(`重建完成，共 ${r.chunks} 个切块`);
+        openMe();
+      } catch (e) { showToast('重建失败：' + e.message); }
+    },
+  });
+});
+
+async function openMe() {
+  try {
+    const st = await api('/api/stats');
+    statsCache = st;
+    $('meChunks').textContent = st.chunks + ' / 100K';
+    $('meChunksBar').style.width = Math.min(100, st.chunks / 1000) + '%';
+    $('meTokens').textContent = fmtK(st.tokensEst);
+    $('meKBs').textContent = st.kbs.length;
+    $('meFiles').textContent = st.files;
+    $('meIndex').textContent = `${st.index} @ ${st.redisAddr}`;
+    $('cfgTable').innerHTML = [
+      ['对话模型', st.chatModel],
+      ['向量模型', st.embedModel],
+      ['向量维度', st.dim],
+      ['检索 TopK', st.topk],
+      ['Redis 地址', st.redisAddr],
+      ['索引名', st.index],
+    ].map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('');
+  } catch (e) { showToast('加载失败：' + e.message); }
+}
+
+/* ================= 问答 ================= */
+const chat = $('chat');
+const input = $('input');
+const sendBtn = $('send');
+const empty = $('empty');
+
+input.addEventListener('input', () => {
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 180) + 'px';
+  sendBtn.classList.toggle('ready', input.value.trim().length > 0);
+});
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(input.value.trim()); }
+});
+sendBtn.addEventListener('click', () => ask(input.value.trim()));
+document.querySelectorAll('.chip.q').forEach(c => c.addEventListener('click', () => ask(c.textContent)));
+
+function escHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function inlineMd(s) {
+  return escHtml(s)
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+function mdToHtml(md) {
+  let html = '', ul = false, ol = false;
+  const closeLists = () => { if (ul) { html += '</ul>'; ul = false; } if (ol) { html += '</ol>'; ol = false; } };
+  for (const raw of md.split('\n')) {
+    const line = raw.trimEnd();
+    const li = line.match(/^\s*[-*]\s+(.*)/);
+    const olm = line.match(/^\s*\d+\.\s+(.*)/);
+    const h = line.match(/^(#{1,4})\s+(.*)/);
+    if (h) { closeLists(); const lv = h[1].length + 2; html += `<h${lv}>${inlineMd(h[2])}</h${lv}>`; }
+    else if (li) { if (!ul) { closeLists(); html += '<ul>'; ul = true; } html += `<li>${inlineMd(li[1])}</li>`; }
+    else if (olm) { if (!ol) { closeLists(); html += '<ol>'; ol = true; } html += `<li>${inlineMd(olm[1])}</li>`; }
+    else if (line === '') { closeLists(); }
+    else { closeLists(); html += `<p>${inlineMd(line)}</p>`; }
+  }
+  closeLists();
+  return html;
+}
+
+function setComposerDock(inEmpty) {
+  const wrap = $('inputWrap');
+  const target = inEmpty ? empty : $('chatBottom');
+  if (!wrap || !target || wrap.parentElement === target) { if (wrap) wrap.style.marginTop = inEmpty ? '22px' : '0'; return; }
+  target.appendChild(wrap);
+  wrap.style.marginTop = inEmpty ? '22px' : '0';
+  input.style.height = 'auto';
+}
+
+function addMe(text) {
+  setComposerDock(false); // 先把输入框移到底部 dock，再移除空状态
+  empty?.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'msg me';
+  const b = document.createElement('div');
+  b.className = 'bubble';
+  b.textContent = text;
+  wrap.appendChild(b);
+  chat.appendChild(wrap);
+  scrollBottom();
+}
+function addCard() {
+  setComposerDock(false); // 同上：先接管输入框再移除空状态
+  empty?.remove();
+  const card = document.createElement('div');
+  card.className = 'card';
+  const md = document.createElement('div');
+  md.className = 'md';
+  card.appendChild(md);
+  chat.appendChild(card);
+  scrollBottom();
+  return { card, md };
+}
+function setStatus(text, loading) {
+  document.getElementById('statusRow')?.remove();
+  if (!text) return;
+  const el = document.createElement('div');
+  el.id = 'statusRow';
+  el.className = 'status';
+  el.innerHTML = loading ? '<span class="dots"><i></i><i></i><i></i></span>' : '';
+  el.append(text);
+  chat.appendChild(el);
+  scrollBottom();
+}
+function scrollBottom() { chat.scrollTop = chat.scrollHeight; }
+function nowTime() {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  return p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+/* ===== 会话管理（localStorage 持久化） ===== */
+const LS_KEY = 'kb_sessions_v1';
+let sessions = [];
+try { sessions = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { sessions = []; }
+let cur = null; // 当前会话 {id, title, ts, msgs}
+
+function saveSessions() {
+  if (cur && !sessions.includes(cur)) sessions.unshift(cur);
+  sessions = sessions.slice(0, 50);
+  try { localStorage.setItem(LS_KEY, JSON.stringify(sessions)); } catch {}
+}
+function newSession() {
+  if (cur && !cur.msgs.length) { showToast('已经是新会话了'); return; }
+  cur = { id: 's' + Date.now() + Math.random().toString(36).slice(2, 6), title: '新会话', ts: Date.now(), msgs: [] };
+  sessions.unshift(cur);
+  saveSessions();
+  resetChatDOM();
+  renderHistory();
+}
+function resetChatDOM() {
+  chat.innerHTML = '';
+  chat.appendChild(empty);
+  empty.style.display = '';
+  setComposerDock(true);
+}
+function renderHistory() {
+  const p = $('historyPanel');
+  const list = sessions.filter(s => s.msgs.length);
+  if (!list.length) { p.innerHTML = '<div class="hist-group">最近</div><div class="hist-empty">暂无会话记录</div>'; return; }
+  p.innerHTML = '';
+  // 按时间分组：近 7 天 / 更早，仿模板的“最近”列表
+  const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
+  const groups = [
+    { label: '近 7 天', items: list.filter(s => s.ts >= weekAgo) },
+    { label: '更早', items: list.filter(s => s.ts < weekAgo) },
+  ];
+  groups.forEach(g => {
+    if (!g.items.length) return;
+    const gl = document.createElement('div');
+    gl.className = 'hist-group';
+    gl.textContent = g.label;
+    p.appendChild(gl);
+    g.items.forEach(s => {
+      const it = document.createElement('div');
+      it.className = 'hist-item' + (cur && s.id === cur.id ? ' active' : '');
+      const last = s.msgs[s.msgs.length - 1];
+      it.title = last ? (last.text || '').slice(0, 80) : '';
+      it.innerHTML = `<span class="t">${esc(s.title)}</span>`;
+      const del = document.createElement('button');
+      del.className = 'del'; del.innerHTML = ICON.trash; del.title = '删除该会话';
+      del.addEventListener('click', e => {
+        e.stopPropagation();
+        sessions = sessions.filter(x => x.id !== s.id);
+        if (cur && cur.id === s.id) { cur = null; resetChatDOM(); }
+        saveSessions(); renderHistory();
+      });
+      it.appendChild(del);
+      it.addEventListener('click', () => {
+        cur = sessions.find(x => x.id === s.id);
+        renderSession();
+        renderHistory();
+      });
+      p.appendChild(it);
+    });
+  });
+}
+function buildSources(list) {
+  const el = document.createElement('div');
+  el.className = 'sources';
+  el.innerHTML = `<div class="title">${ICON.file}原资料溯源依据（${list.length} 处匹配）</div>` +
+    list.map(s => `
+      <div class="src-item" title="${escHtml(s.content?.slice(0, 120) || '')}">
+        <span class="icon">${ICON.file}</span>
+        <span class="name">${escHtml(s.source)}</span>
+        ${s.score > 0 ? `<span class="score">${Math.round(s.score * 100)}%</span><span class="pct">相似度</span>` : ''}
+      </div>`).join('');
+  return el;
+}
+function addAiDOM(m) {
+  empty?.remove();
+  setComposerDock(false);
+  const card = document.createElement('div');
+  card.className = 'card';
+  const md = document.createElement('div');
+  md.className = 'md';
+  md.innerHTML = mdToHtml(m.text || '');
+  card.appendChild(md);
+  if (m.sources?.length) card.appendChild(buildSources(m.sources));
+  if (m.websources?.length) {
+    const el = document.createElement('div');
+    el.className = 'sources';
+    el.innerHTML = `<div class="title">${ICON.globe}联网检索到 ${m.websources.length} 条资料</div>` +
+      m.websources.map(s => `
+        <div class="src-item">
+          <span class="icon">${ICON.globe}</span>
+          <span class="name">${escHtml(s.title || s.url || '')}</span>
+          ${s.url ? `<a class="pct" href="${escHtml(s.url)}" target="_blank" rel="noopener" style="margin-left:auto">查看原文</a>` : ''}
+        </div>`).join('');
+    card.appendChild(el);
+  }
+  if (m.saved) {
+    const el = document.createElement('div');
+    el.className = 'saved-line';
+    el.innerHTML = `${ICON.save}<span>已沉淀到知识库「${escHtml(m.saved.kb)}」→ ${escHtml(m.saved.source)}</span>`;
+    card.appendChild(el);
+  } else if (m.cancelled) {
+    const el = document.createElement('div');
+    el.className = 'saved-line';
+    el.innerHTML = `${ICON.ban}<span>已取消，这条回答没有写入知识库</span>`;
+    card.appendChild(el);
+  }
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  meta.innerHTML = `<span>${m.time || ''}</span><span>${MODEL}-RAG</span>` +
+    `<span class="copy" title="复制回答">${ICON.copy}复制</span>`;
+  meta.querySelector('.copy').addEventListener('click', () => {
+    navigator.clipboard.writeText(m.text || '');
+    showToast('已复制到剪贴板');
+  });
+  card.appendChild(meta);
+  chat.appendChild(card);
+}
+function renderSession() {
+  resetChatDOM();
+  if (!cur) return;
+  for (const m of cur.msgs) {
+    if (m.role === 'user') addMe(m.text);
+    else addAiDOM(m);
+  }
+  setComposerDock(!cur.msgs.length);
+  scrollBottom();
+}
+$('newSessionBtn').addEventListener('click', () => {
+  newSession();
+  if (cur.msgs.length === 0) showToast('已开启新会话');
+});
+
+let busy = false;
+async function ask(question) {
+  if (!question || busy) return;
+  busy = true;
+  sendBtn.classList.remove('ready');
+  input.value = '';
+  input.style.height = 'auto';
+
+  // 会话记录：用户消息先落库
+  if (!cur) { cur = { id: 's' + Date.now(), title: question.slice(0, 30), ts: Date.now(), msgs: [] }; sessions.unshift(cur); }
+  if (cur.msgs.length === 0) cur.title = question.slice(0, 30);
+  cur.msgs.push({ role: 'user', text: question });
+  saveSessions();
+
+  addMe(question);
+  const { card, md } = addCard();
+  setStatus('正在检索笔记...', true);
+
+  let answer = '';
+  let gotError = false;
+  let sourcesEl = null;
+  const amsg = { role: 'assistant', text: '', sources: null, websources: null, saved: null, time: '' };
+  cur.msgs.push(amsg);
+  saveSessions();
+
+  // 联网模式下的辅助渲染
+  const renderWebSources = list => {
+    if (!list?.length) return;
+    const el = document.createElement('div');
+    el.className = 'sources';
+    el.innerHTML = `<div class="title">${ICON.globe}联网检索到 ${list.length} 条资料</div>` +
+      list.map(s => `
+        <div class="src-item">
+          <span class="icon">${ICON.globe}</span>
+          <span class="name">${escHtml(s.title || s.url || '')}</span>
+          ${s.url ? `<a class="pct" href="${escHtml(s.url)}" target="_blank" rel="noopener" style="margin-left:auto">查看原文</a>` : ''}
+        </div>`).join('');
+    card.appendChild(el);
+    scrollBottom();
+  };
+  const addNotice = text => {
+    if (!text) return;
+    const el = document.createElement('div');
+    el.className = 'notice-line';
+    el.innerHTML = `${ICON.warn}<span>${escHtml(text)}</span>`;
+    card.appendChild(el);
+    scrollBottom();
+  };
+  const renderSaved = info => {
+    if (!info) return;
+    const el = document.createElement('div');
+    el.className = 'saved-line';
+    el.innerHTML = `${ICON.save}<span>已沉淀到知识库「${escHtml(info.kb)}」→ ${escHtml(info.source)}` +
+      (info.mode === 'inbox' ? '（待确认，可在原料操作中审核）' : '') + `</span>`;
+    card.appendChild(el);
+    scrollBottom();
+    showToast('已沉淀到知识库：' + info.kb);
+  };
+  // 联网沉淀：先弹窗问用户是否入库，目标知识库不存在会自动新建
+  const renderConfirm = info => {
+    const el = document.createElement('div');
+    el.className = 'saved-line';
+    el.innerHTML = `${ICON.save}<span>要把这条回答沉淀进知识库吗？建议归入「${escHtml(info.kb)}」</span>`;
+    card.appendChild(el);
+    scrollBottom();
+    openDlg({
+      title: '添加到个人知识库？',
+      text: '确认后这条问答会写成 Markdown 笔记并切块入库；目标知识库不存在时会自动新建（不会存进默认笔记库）。',
+      input: true,
+      inputValue: info.kb,
+      placeholder: '目标知识库名称',
+      okText: '添加入库',
+      onOk: async name => {
+        if (!name) { $('dlgErr').textContent = '请输入知识库名称'; return false; }
+        try {
+          const r = await api('/api/web/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: info.id, kb: name }) });
+          amsg.saved = { kb: r.kb, source: r.source, mode: 'direct' };
+          amsg.cancelled = false;
+          el.innerHTML = `${ICON.save}<span>已沉淀到知识库「${escHtml(r.kb)}」→ ${escHtml(r.source)}</span>`;
+          showToast('已沉淀到知识库：' + r.kb);
+          saveSessions();
+        } catch (e) { $('dlgErr').textContent = '入库失败：' + e.message; return false; }
+      },
+      onCancel: async () => {
+        try {
+          await api('/api/web/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: info.id, cancel: true }) });
+        } catch {}
+        amsg.saved = null;
+        amsg.cancelled = true;
+        el.innerHTML = `${ICON.ban}<span>已取消，这条回答没有写入知识库</span>`;
+        saveSessions();
+      },
+    });
+  };
+
+  const renderSources = list => {
+    amsg.sources = list?.length ? list : amsg.sources;
+    sourcesEl?.remove();
+    if (!list?.length) return;
+    sourcesEl = buildSources(list);
+    card.appendChild(sourcesEl);
+    scrollBottom();
+  };
+
+  try {
+    const res = await fetch('/api/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question }),
+    });
+    if (!res.ok) throw new Error('服务返回 ' + res.status);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { value, done: fin } = await reader.read();
+      if (fin) break;
+      buffer += decoder.decode(value, { stream: true });
+      const frames = buffer.split('\n\n');
+      buffer = frames.pop();
+
+      for (const frame of frames) {
+        const ev = frame.match(/^event: (.+)$/m)?.[1];
+        const raw = frame.match(/^data: (.*)$/m)?.[1];
+        if (!ev) continue;
+        let data = raw ?? '';
+        try { data = JSON.parse(raw); } catch {}
+
+        if (ev === 'delta') {
+          setStatus('');
+          answer += data;
+          md.innerHTML = mdToHtml(answer) + '<span class="cursor"></span>';
+          scrollBottom();
+        } else if (ev === 'sources') {
+          renderSources(data);
+        } else if (ev === 'mode') {
+          amsg.mode = data;
+          if (data === 'web') setStatus('笔记里没找到相关内容，正在联网检索...', true);
+        } else if (ev === 'websources') {
+          amsg.websources = data;
+          renderWebSources(data);
+        } else if (ev === 'notice') {
+          addNotice(data);
+        } else if (ev === 'saved') {
+          amsg.saved = data;
+          renderSaved(data);
+        } else if (ev === 'confirm') {
+          amsg.pending = data;
+          renderConfirm(data);
+        } else if (ev === 'status') {
+          setStatus(data || '思考中...', true);
+        } else if (ev === 'error') {
+          gotError = true;
+          setStatus('');
+          md.innerHTML = `<span class="err">出错了：${escHtml(String(data))}</span>`;
+        }
+      }
+    }
+    setStatus('');
+    if (!answer && !gotError) md.innerHTML = '<span style="color:var(--muted)">没有拿到回答。</span>';
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.innerHTML = `<span>${nowTime()}</span><span>${MODEL}-RAG</span>` +
+      `<span>≈${Math.max(1, Math.round(answer.length / 1.6))} Tokens</span>` +
+      `<span class="copy" title="复制回答">${ICON.copy}复制</span>`;
+    meta.querySelector('.copy').addEventListener('click', () => {
+      navigator.clipboard.writeText(answer);
+      showToast('已复制到剪贴板');
+    });
+    card.appendChild(meta);
+    scrollBottom();
+
+    amsg.text = answer;
+    amsg.time = nowTime();
+    cur.ts = Date.now();
+    saveSessions();
+    renderHistory();
+  } catch (e) {
+    setStatus('');
+    amsg.text = answer;
+    saveSessions();
+    md.innerHTML = `<span class="err">请求失败：${escHtml(e.message)}</span>`;
+  } finally {
+    busy = false;
+    input.focus();
+  }
+}
+setComposerDock(true);
+switchView('chat');
+renderHistory(); // 左侧会话列表默认就渲染出来
+</script>
+</body>
+</html>
